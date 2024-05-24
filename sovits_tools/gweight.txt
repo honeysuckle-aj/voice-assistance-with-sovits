@@ -1,0 +1,1 @@
+D:\Projects\voice-assistant\models\paimeng-gpt.ckpt
