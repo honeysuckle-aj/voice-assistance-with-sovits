@@ -1,3 +1,4 @@
+import argparse
 import time
 import wave
 import queue
@@ -17,7 +18,8 @@ from langchain.prompts import PromptTemplate
 from langchain.callbacks.base import BaseCallbackHandler, BaseCallbackManager
 
 from sovits_tools.voice import get_tts_wav, load_sovits_weights, load_gpt_weights
-import voice_configs
+import wpq_configs
+import jyh_configs
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -103,65 +105,12 @@ def record_audio():
         wf.setframerate(RATE)
         wf.writeframes(b''.join(frames))
 
-
-class VoiceOutputCallbackHandler(BaseCallbackHandler):
-    def __init__(self):
-        self.generated_text = ""
-        self.lock = threading.Lock()
-        self.speech_queue = queue.Queue()
-        self.worker_thread = threading.Thread(target=self.process_queue)
-        self.worker_thread.daemon = True
-        self.worker_thread.start()
-        self.tts_busy = False
-
-    def on_llm_new_token(self, token, **kwargs):
-        # Append the token to the generated text
-        with self.lock:
-            self.generated_text += token
-
-        # Check if the token is the end of a sentence
-        if token in ['.', '。', '!', '！', '?', '？']:
-            with self.lock:
-                # Put the complete sentence in the queue
-                self.speech_queue.put(self.generated_text)
-                self.generated_text = ""
-
-    def process_queue(self):
-        while True:
-            # Wait for the next sentence
-            text = self.speech_queue.get()
-            if text is None:
-                self.tts_busy = False
-                continue
-            self.tts_busy = True
-            self.text_to_speech(text)
-            self.speech_queue.task_done()
-            if self.speech_queue.empty():
-                self.tts_busy = False
-
-    def text_to_speech(self, text):
-        try:
-            if LANG == "CN":
-                subprocess.call(["say", "-r", "200", "-v", "TingTing", text])
-            else:
-                subprocess.call(["say", "-r", "180", "-v", "Karen", text])
-        except Exception as e:
-            print(f"Error in text-to-speech: {e}")
-
-
-if __name__ == '__main__':
-    # if LANG == "CN":
-    #     prompt_path = "prompts/example-cn.txt"
-    # else:
-    #     prompt_path = "prompts/example-en.txt"
-    # with open(prompt_path, 'r', encoding='utf-8') as file:
-    #     template = file.read().strip()  # {dialogue}
-    # prompt_template = PromptTemplate(template=template, input_variables=["dialogue"])
+def main(args):
     prompt_path = "prompts/wpq_template.txt"
     with open(prompt_path, 'r', encoding='utf-8') as file:
         template = file.read().strip()  # {dialogue}
     prompt_template = PromptTemplate(template=template, input_variables=["dialogue"])
-
+    voice_configs = eval(args.config + "_configs")
     sovits_path = voice_configs.SOVITS_PATH
     gpt_path = voice_configs.GPT_PATH
     ref_wav_path = voice_configs.REF_WAVE_PATH
@@ -184,7 +133,7 @@ if __name__ == '__main__':
     #     stop=["<|im_end|>"],
     #     verbose=False,
     # )
-    llm = Ollama(model="qwen:7b",verbose=False)
+    llm = Ollama(model="qwen:7b", verbose=False)
     whisper_model = whisper.load_model("large", download_root="./models")
     vq_model, hps = load_sovits_weights(sovits_path)
     tts_model = load_gpt_weights(gpt_path)
@@ -196,13 +145,13 @@ if __name__ == '__main__':
             #     continue  # Skip to the next iteration if TTS is busy
             try:
                 print("按下空格开始说话")
-                # user_input = input()
-                record_audio()
-                print("Transcribing...")
-                time_ckpt = time.time()
-                user_input = whisper_model.transcribe("recordings/output.wav", language="zh")["text"]
-
-                print("%s: %s (Time %d ms)" % ("Guest", user_input, (time.time() - time_ckpt) * 1000))
+                user_input = input()
+                # record_audio()
+                # print("Transcribing...")
+                # time_ckpt = time.time()
+                # user_input = whisper_model.transcribe("recordings/output.wav", language="zh")["text"]
+                #
+                # print("%s: %s (Time %d ms)" % ("Guest", user_input, (time.time() - time_ckpt) * 1000))
 
             except subprocess.CalledProcessError:
                 print("voice recognition failed, please try again")
@@ -211,7 +160,7 @@ if __name__ == '__main__':
             print("Generating...")
             dialogue += "*Q* {}\n".format(user_input)
             prompt = prompt_template.format(dialogue=dialogue)
-            reply = llm.invoke(prompt, max_tokens=2048)
+            reply = llm.invoke(prompt, max_tokens=4096)
             if reply is not None:
                 # voice_output_handler.speech_queue.put(reply)
                 text_lang = get_language(reply)
@@ -225,3 +174,18 @@ if __name__ == '__main__':
                 print("%s: %s (Time %d ms)" % ("Server", reply.strip(), (time.time() - time_ckpt) * 1000))
     except KeyboardInterrupt:
         pass
+
+
+if __name__ == '__main__':
+    # if LANG == "CN":
+    #     prompt_path = "prompts/example-cn.txt"
+    # else:
+    #     prompt_path = "prompts/example-en.txt"
+    # with open(prompt_path, 'r', encoding='utf-8') as file:
+    #     template = file.read().strip()  # {dialogue}
+    # prompt_template = PromptTemplate(template=template, input_variables=["dialogue"])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default=r"wpq")
+    args = parser.parse_args()
+    main(args)
+
