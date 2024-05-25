@@ -6,6 +6,7 @@ import threading
 import subprocess
 import torch
 import warnings
+import keyboard
 
 import pyaudio
 import simpleaudio as sa
@@ -75,7 +76,8 @@ def record_audio():
     silent_chunks = 0
     audio_started = False
     frames = []
-
+    keyboard.wait("space")
+    print("Listening...")
     while True:
         data = stream.read(CHUNK)
         frames.append(data)
@@ -182,7 +184,7 @@ if __name__ == '__main__':
     #     stop=["<|im_end|>"],
     #     verbose=False,
     # )
-    llm = Ollama(model="qwen:7b")
+    llm = Ollama(model="qwen:7b",verbose=False)
     whisper_model = whisper.load_model("large", download_root="./models")
     vq_model, hps = load_sovits_weights(sovits_path)
     tts_model = load_gpt_weights(gpt_path)
@@ -193,14 +195,14 @@ if __name__ == '__main__':
             # if voice_output_handler.tts_busy:  # Check if TTS is busy
             #     continue  # Skip to the next iteration if TTS is busy
             try:
-                print("Listening...")
-                user_input = input()
-                # record_audio()
-                # print("Transcribing...")
-                # time_ckpt = time.time()
-                # user_input = whisper_model.transcribe("recordings/output.wav", language="zh")["text"]
+                print("按下空格开始说话")
+                # user_input = input()
+                record_audio()
+                print("Transcribing...")
+                time_ckpt = time.time()
+                user_input = whisper_model.transcribe("recordings/output.wav", language="zh")["text"]
 
-                # print("%s: %s (Time %d ms)" % ("Guest", user_input, (time.time() - time_ckpt) * 1000))
+                print("%s: %s (Time %d ms)" % ("Guest", user_input, (time.time() - time_ckpt) * 1000))
 
             except subprocess.CalledProcessError:
                 print("voice recognition failed, please try again")
