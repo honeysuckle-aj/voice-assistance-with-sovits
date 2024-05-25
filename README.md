@@ -1,53 +1,190 @@
-# A Simple Voice Assistant Script
+# A Simple Voice Assistant With GPT-SOVITS
 
 English | [简体中文](README-CN.md)
 
-This is a simple Python script project that allows dialogue with a local large language model through voice.
+This is a local llm assistant which use gpt-sovits to generate someone-like vocie.
 
-The voice recognition part of this project is from the [Apple MLX example repo](https://github.com/ml-explore/mlx-examples/tree/main/whisper), and the textual responses are generated using the Yi model from [01.AI](https://www.lingyiwanwu.com). For more details, see the [Acknowledgments](## Acknowledgments) section.
+This work is mainly based on LinYi's [voice-assistant](https://github.com/linyiLYi/voice-assistant) and RVC-Boss's [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS).
 
 ### File Structure
 
-```bash
-├───main.py
-├───models
-├───prompts
-├───recordings
-├───tools
-│   └───list_microphones.py
-├───whisper
+```powershell
+│  .gitignore
+│  LICENSE
+│  llama_demo.py
+│  main.py
+│  README-CN.md
+│  README.md
+│  requirements.txt
+│  utils.py
+│  voice_configs.py
+│
+├─logs
+│  └─s2
+│      └─big2k1
+│              config.json
+│
+├─models
+│  ├─chinese-hubert-base
+│  │      config.json
+│  │      preprocessor_config.json
+│  │      pytorch_model.bin
+│  │
+│  ├─chinese-roberta-wwm-ext-large
+│         config.json
+│         pytorch_model.bin
+│         tokenizer.json
+│
+├─prompts
+│      example-cn.txt
+│      example-en.txt
+│      wpq_template.txt
+│
+├─recordings
+│      output.wav
+│
+└─sovits_tools
+    │  gweight.txt
+    │  list_microphones.py
+    │  my_utils.py
+    │  utils.py
+    │  voice.py
+    │
+    ├─AR
+    │  │  __init__.py
+    │  │
+    │  ├─data
+    │  │      bucket_sampler.py
+    │  │      dataset.py
+    │  │      data_module.py
+    │  │      __init__.py
+    │  │
+    │  ├─models
+    │  │     t2s_lightning_module.py
+    │  │     t2s_lightning_module_onnx.py
+    │  │     t2s_model.py
+    │  │     t2s_model_onnx.py
+    │  │     utils.py
+    │  │     __init__.py
+    │  │
+    │  ├─modules
+    │  │     activation.py
+    │  │     activation_onnx.py
+    │  │     embedding.py
+    │  │     embedding_onnx.py
+    │  │     lr_schedulers.py
+    │  │     optim.py
+    │  │     patched_mha_with_cache.py
+    │  │     patched_mha_with_cache_onnx.py
+    │  │     scaling.py
+    │  │     transformer.py
+    │  │     transformer_onnx.py
+    │  │     __init__.py
+    │  │
+    │  ├─text_processing
+    │  │      phonemizer.py
+    │  │      symbols.py
+    │  │      __init__.py
+    │  │
+    │  └─utils
+    │          initialize.py
+    │          io.py
+    │          __init__.py
+    │
+    ├─configs
+    │      s1.yaml
+    │      s1big.yaml
+    │      s1big2.yaml
+    │      s1longer.yaml
+    │      s1mq.yaml
+    │      s2.json
+    │      train.yaml
+    │
+    ├─feature_extractor
+    │      cnhubert.py
+    │      whisper_enc.py
+    │      __init__.py
+    │
+    ├─module
+    │      attentions.py
+    │      attentions_onnx.py
+    │      commons.py
+    │      core_vq.py
+    │      data_utils.py
+    │      losses.py
+    │      mel_processing.py
+    │      models.py
+    │      models_onnx.py
+    │      modules.py
+    │      mrte_model.py
+    │      quantize.py
+    │      transforms.py
+    │      __init__.py
+    │
+    └─text
+        │  chinese.py
+        │  cleaner.py
+        │  cmudict-fast.rep
+        │  cmudict.rep
+        │  engdict-hot.rep
+        │  engdict_cache.pickle
+        │  english.py
+        │  japanese.py
+        │  opencpop-strict.txt
+        │  symbols.py
+        │  tone_sandhi.py
+        │  __init__.py
+        │
+        └─zh_normalization
+                char_convert.py
+                chronology.py
+                constants.py
+                num.py
+                phonecode.py
+                quantifier.py
+                README.md
+                text_normlization.py
+                __init__.py
 ```
 
-This project is a single-script project, with main.py containing all program logic. The `models/` folder stores model files. `prompts/` contains prompt words. `recordings/` holds temporary recordings. `tools/list_microphones.py` is a simple script to view the microphone list, used in `main.py` to specify the microphone number. `whisper/` is from the [Apple MLX example repo](https://github.com/ml-explore/mlx-examples/tree/main/whisper), used for recognizing user's voice input.
+This project is a single-script project, with main.py containing all program logic. The `voice_config.json` controls the configuration of generated voice. The `models/`folder stores model files, including llm, whisper and tts. `prompts/`contains prompt words. `recordings/`holds temporary recordings. `sovits_tools/list_microphones.py`is a simple script to view the microphone list, used in`main.py`to specify the microphone number. `sovits_tools/` contains voice generating tools.
 
 ## Installation Guide
 
-This project is based on the Python programming language, and the Python version used for program operation is 3.11.5. It is recommended to configure the Python environment using [Anaconda](https://www.anaconda.com). The following setup process has been tested and passed on macOS systems. Windows and Linux can use speech_recognition and pyttsx3 to replace the whisper and say commands mentioned below. The following are console/terminal/shell commands.
+It is a python project.
+
+Before you install python requirements, you need to download and install [Ollama](https://ollama.com/download).
+
+It is recommanded to use Anaconda to settle the environment.
 
 ### Environment Configuration
-```
-conda create -n VoiceAI python=3.11
-conda activate VoiceAI
-pip install -r requirements.txt
-CMAKE_ARGS="-DLLAMA_METAL=on" pip install llama-cpp-python
 
-# Install audio processing tools
-brew install portaudio
-pip install pyaudio
+Create your conda env
+
+```powershell
+conda create -n chat python=3.10 -y
+conda activate chat
+```
+
+Before install other packages, you need to install [Pytorch](https://pytorch.org/get-started/locally/) whose version depends on your device especially when you use GPU.
+
+Then
+
+```powershell
+pip install -r requirements.txt
+```
+
+You can pull ollama models in advance
+
+```powershell
+ollama pull Qwen:7b
+ollama run Qwen:7b
 ```
 
 ### Model Files
+
 The model files are stored in the `models/` folder and specified in the script via the `MODEL_PATH` variable.
-It is recommended to download the gguf format models from TheBloke and XeIaso, where the 6B model has a smaller memory footprint:
-- [TheBloke/Yi-34B-Chat-GGUF](https://huggingface.co/TheBloke/Yi-34B-Chat-GGUF/blob/main/yi-34b-chat.Q8_0.gguf)
-- [XeIaso/Yi-6B-Chat-GGUF](https://huggingface.co/XeIaso/yi-chat-6B-GGUF/blob/main/yi-chat-6b.Q8_0.gguf)
-The voice recognition model is by default stored in `models/whisper-large-v3/`, specified in the script via `WHISP_PATH`. The [version](https://huggingface.co/mlx-community/whisper-large-v3-mlx) converted by mlx-community can be directly downloaded.
 
-#### Model Files
-
-The voice recognition part of this project is based on OpenAI's whisper model, its implementation comes from the [Apple MLX example repo](https://github.com/ml-explore/mlx-examples/tree/main/whisper). The version used in this project is from January 2024, #80d1867. In the future, users can fetch new versions as needed.
-
-The responses in this project are generated by the large language model Yi from [01.AI](https://www.lingyiwanwu.com), where Yi-34B-Chat is more powerful. The [8-bit quantized version made by TheBloke](https://huggingface.co/TheBloke/Yi-34B-Chat-GGUF) has a memory footprint of 39.04 GB
-and is recommended for use if hardware conditions permit. This model runs locally based on the [LangChain](https://www.langchain.com) framework and [llama.cpp by Georgi Gerganov](https://github.com/ggerganov/llama.cpp).
+I use Qwen:7b and there are plenty of other llm models you can choose from [Ollama Library](https://ollama.com/library).
 
 Thank you to all selfless programmers for their contributions to the open-source community!

@@ -24,3 +24,4 @@ cn2an
 pypinyin
 jieba_fast
 ffmpeg-python
+ollama
