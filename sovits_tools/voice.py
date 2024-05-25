@@ -1,5 +1,7 @@
 import os, re
 import LangSegment
+from tqdm import tqdm
+
 import voice_configs as configs
 import torch
 from transformers import AutoModelForMaskedLM, AutoTokenizer
@@ -226,7 +228,7 @@ def nonen_clean_text_inf(text, language):
         if lang == "zh":
             word2ph_list.append(word2ph)
         norm_text_list.append(norm_text)
-    print(word2ph_list)
+    # print(word2ph_list)
     phones = sum(phones_list, [])
     word2ph = sum(word2ph_list, [])
     norm_text = ' '.join(norm_text_list)
@@ -243,8 +245,8 @@ def nonen_get_bert_inf(text, language):
         for tmp in LangSegment.getTexts(text):
             langlist.append(tmp["lang"])
             textlist.append(tmp["text"])
-    print(textlist)
-    print(langlist)
+    # print(textlist)
+    # print(langlist)
     bert_list = []
     for i in range(len(textlist)):
         lang = langlist[i]
@@ -266,7 +268,12 @@ def get_first(text):
 
 
 def get_cleaned_text_final(text, language):
-    phones, word2ph, norm_text = clean_text_inf(text, language)
+    if language in {"en", "all_zh", "all_ja"}:
+        phones, word2ph, norm_text = clean_text_inf(text, language)
+    elif language in {"zh", "ja", "auto"}:
+        phones, word2ph, norm_text = nonen_clean_text_inf(text, language)
+    else:
+        phones, word2ph, norm_text = nonen_clean_text_inf(text, language)
     return phones, word2ph, norm_text
 
 
@@ -301,11 +308,11 @@ def merge_short_text_in_array(texts, threshold):
 
 
 def get_tts_wav(vq_model, t2s_model, hps, ref_wav_path, prompt_text, text, top_k=20,
-                top_p=0.6, temperature=0.6, hz=50):
+                top_p=0.6, temperature=0.6, hz=50, text_language="all_zh"):
 
     t0 = ttime()
     prompt_language = "all_zh"
-    text_language = "all_zh"
+    # text_language = "all_zh"
 
     # 输入的参考文本
     prompt_text = prompt_text.strip("\n")
@@ -342,6 +349,7 @@ def get_tts_wav(vq_model, t2s_model, hps, ref_wav_path, prompt_text, text, top_k
         prompt_semantic = codes[0, 0]
     t1 = ttime()
     # 按标点符号切分目标句子
+    # text = cut_4_sentences(text)
     text = cut_by_punctuation(text)
     while "\n\n" in text:
         text = text.replace("\n\n", "\n")
@@ -355,7 +363,7 @@ def get_tts_wav(vq_model, t2s_model, hps, ref_wav_path, prompt_text, text, top_k
 
     bert1 = get_bert_final(phones1, word2ph1, norm_text1, prompt_language, device).to(torch.float16)
 
-    for text in texts:
+    for text in tqdm(texts):
         # 解决输入目标文本的空行导致报错的问题
         if len(text.strip()) == 0:
             continue
@@ -440,11 +448,24 @@ def cut_by_punctuation(inp):
     # inp += '。'
     inp = inp.strip("\n")
     punds = r'[,.;?!、，。？！;：]'
+    # punds = r'[.;?!。？！;]'
     items = re.split(f'({punds})', inp)
     items = ["".join(group) for group in zip(items[::2], items[1::2])]
     opt = "\n".join(items)
     return opt
 
+def cut_4_sentences(inp):
+    inp = inp.strip("\n")
+    inps = split(inp)
+    split_idx = list(range(0, len(inps), 4))
+    split_idx[-1] = None
+    if len(split_idx) > 1:
+        opts = []
+        for idx in range(len(split_idx) - 1):
+            opts.append("".join(inps[split_idx[idx]: split_idx[idx + 1]]))
+    else:
+        opts = [inp]
+    return "\n".join(opts)
 
 def custom_sort_key(s):
     # 使用正则表达式提取字符串中的数字部分和非数字部分

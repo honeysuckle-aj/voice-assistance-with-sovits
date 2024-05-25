@@ -1,6 +1,6 @@
-from sovits_tools.text import chinese, cleaned_text_to_sequence, symbols
+from sovits_tools.text import chinese, english, cleaned_text_to_sequence, symbols
 
-language_module_map = {"zh": chinese}
+language_module_map = {"zh": chinese, "en": english}
 special = [
     # ("%", "zh", "SP"),
     ("￥", "zh", "SP2"),
@@ -10,9 +10,9 @@ special = [
 
 
 def clean_text(text, language):
-    if(language not in language_module_map):
-        language="en"
-        text=" "
+    if language not in language_module_map:
+        language = "en"
+        text = " "
     for special_s, special_l, target_symbol in special:
         if special_s in text and language == special_l:
             return clean_special(text, language, special_s, target_symbol)
@@ -50,7 +50,7 @@ def clean_special(text, language, special_s, target_symbol):
 
 
 def text_to_sequence(text, language):
-    phones = clean_text(text)
+    phones = clean_text(text, language)
     return cleaned_text_to_sequence(phones)
 
 

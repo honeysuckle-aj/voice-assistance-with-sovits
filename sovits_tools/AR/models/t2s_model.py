@@ -547,7 +547,7 @@ class Text2SemanticDecoder(nn.Module):
             x.device
         )
 
-        for idx in tqdm(range(1500)):
+        for idx in range(1500):
             if xy_attn_mask is not None:
                 xy_dec, k_cache, v_cache = self.t2s_transformer.process_prompt(xy_pos, xy_attn_mask)
             else:
@@ -576,7 +576,7 @@ class Text2SemanticDecoder(nn.Module):
                 if y.shape[1]==0:
                     y = torch.concat([y, torch.zeros_like(samples)], dim=1)
                     print("bad zero prediction")
-                print(f"T2S Decoding EOS [{prefix_len} -> {y.shape[1]}]")
+                # print(f"T2S Decoding EOS [{prefix_len} -> {y.shape[1]}]")
                 break
 
             ####################### update next step ###################################

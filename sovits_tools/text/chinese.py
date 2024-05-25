@@ -4,6 +4,11 @@ import re
 
 import cn2an
 from pypinyin import lazy_pinyin, Style
+import jieba_fast as jieba
+import jieba_fast.posseg as psg
+import logging
+
+jieba.setLogLevel(logging.ERROR)
 
 from sovits_tools.text.symbols import punctuation
 from sovits_tools.text.tone_sandhi import ToneSandhi
@@ -16,9 +21,6 @@ pinyin_to_symbol_map = {
     line.split("\t")[0]: line.strip().split("\t")[1]
     for line in open(os.path.join(current_file_path, "opencpop-strict.txt")).readlines()
 }
-
-import jieba_fast.posseg as psg
-
 
 rep_map = {
     "：": ",",
@@ -35,7 +37,7 @@ rep_map = {
     "/": ",",
     "—": "-",
     "~": "…",
-    "～":"…",
+    "～": "…",
 }
 
 tone_modifier = ToneSandhi()
@@ -167,7 +169,6 @@ if __name__ == "__main__":
     text = "你好"
     text = text_normalize(text)
     print(g2p(text))
-
 
 # # 示例用法
 # text = "这是一个示例文本：,你好！这是一个测试..."

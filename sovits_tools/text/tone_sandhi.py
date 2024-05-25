@@ -13,11 +13,14 @@
 # limitations under the License.
 from typing import List
 from typing import Tuple
+import logging
 
 import jieba_fast as jieba
 from pypinyin import lazy_pinyin
 from pypinyin import Style
 
+
+jieba.setLogLevel(logging.ERROR)
 
 class ToneSandhi:
     def __init__(self):

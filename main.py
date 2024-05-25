@@ -5,6 +5,7 @@ import struct
 import threading
 import subprocess
 import torch
+import warnings
 
 import pyaudio
 import simpleaudio as sa
@@ -16,6 +17,8 @@ from langchain.callbacks.base import BaseCallbackHandler, BaseCallbackManager
 
 from sovits_tools.voice import get_tts_wav, load_sovits_weights, load_gpt_weights
 import voice_configs
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 LANG = "CN"  # CN for Chinese, EN for English
 DEBUG = True
@@ -34,6 +37,7 @@ SILENT_CHUNKS = 2 * RATE / CHUNK  # two seconds of silence marks the end of user
 MIC_IDX = 1  # Set microphone id. Use tools/list_microphones.py to see a device list.
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
+
 def compute_rms(data):
     # Assuming data is in 16-bit samples
     format = "<{}h".format(len(data) // 2)
@@ -43,6 +47,24 @@ def compute_rms(data):
     sum_squares = sum(i ** 2 for i in ints)
     rms = (sum_squares / len(ints)) ** 0.5
     return rms
+
+
+def get_language(text):
+    zh = False
+    en = False
+    for w in text:
+        if 'a' <= w <= 'z' or 'A' <= w <= 'Z':
+            en = True
+            break
+    for w in text:
+        if '\u4e00' <= w <= '\u9fff':
+            zh = True
+            break
+    if zh and not en:
+        return "all_zh"
+    if zh and en:
+        return "zh"
+    return "en"
 
 
 def record_audio():
@@ -126,17 +148,23 @@ class VoiceOutputCallbackHandler(BaseCallbackHandler):
 
 
 if __name__ == '__main__':
-    if LANG == "CN":
-        prompt_path = "prompts/example-cn.txt"
-    else:
-        prompt_path = "prompts/example-en.txt"
+    # if LANG == "CN":
+    #     prompt_path = "prompts/example-cn.txt"
+    # else:
+    #     prompt_path = "prompts/example-en.txt"
+    # with open(prompt_path, 'r', encoding='utf-8') as file:
+    #     template = file.read().strip()  # {dialogue}
+    # prompt_template = PromptTemplate(template=template, input_variables=["dialogue"])
+    prompt_path = "prompts/wpq_template.txt"
     with open(prompt_path, 'r', encoding='utf-8') as file:
         template = file.read().strip()  # {dialogue}
     prompt_template = PromptTemplate(template=template, input_variables=["dialogue"])
+
     sovits_path = voice_configs.SOVITS_PATH
     gpt_path = voice_configs.GPT_PATH
     ref_wav_path = voice_configs.REF_WAVE_PATH
-    ref_text = voice_configs.REF_TEXT
+    with open(voice_configs.REF_TEXT_PATH, "r", encoding='utf-8') as f:
+        ref_text = f.read()
 
     # Create an instance of the VoiceOutputCallbackHandler
     # voice_output_handler = VoiceOutputCallbackHandler()
@@ -171,7 +199,7 @@ if __name__ == '__main__':
                 # print("Transcribing...")
                 # time_ckpt = time.time()
                 # user_input = whisper_model.transcribe("recordings/output.wav", language="zh")["text"]
-                # user_input = whisper.transcribe("recordings/output.wav", path_or_hf_repo=WHISP_PATH)["text"]
+
                 # print("%s: %s (Time %d ms)" % ("Guest", user_input, (time.time() - time_ckpt) * 1000))
 
             except subprocess.CalledProcessError:
@@ -184,7 +212,10 @@ if __name__ == '__main__':
             reply = llm.invoke(prompt, max_tokens=2048)
             if reply is not None:
                 # voice_output_handler.speech_queue.put(reply)
-                sampling_rate, output_wave = get_tts_wav(vq_model, tts_model, hps, ref_wav_path, ref_text, reply)
+                text_lang = get_language(reply)
+
+                sampling_rate, output_wave = get_tts_wav(vq_model, tts_model, hps, ref_wav_path, ref_text, reply,
+                                                         text_language=text_lang)
                 audio_obj = sa.WaveObject(output_wave, sample_rate=sampling_rate // 2)
                 play_obj = audio_obj.play()
                 play_obj.wait_done()
