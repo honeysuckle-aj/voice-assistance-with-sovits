@@ -2,7 +2,7 @@ import os, re
 import LangSegment
 from tqdm import tqdm
 
-import wpq_configs as configs
+import voice_configs.wpq_configs as configs
 import torch
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 import numpy as np

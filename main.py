@@ -8,7 +8,6 @@ import subprocess
 import torch
 import warnings
 import keyboard
-
 import pyaudio
 import simpleaudio as sa
 import whisper
@@ -18,8 +17,9 @@ from langchain.prompts import PromptTemplate
 from langchain.callbacks.base import BaseCallbackHandler, BaseCallbackManager
 
 from sovits_tools.voice import get_tts_wav, load_sovits_weights, load_gpt_weights
-import wpq_configs
-import jyh_configs
+
+# import voice configs for tts
+from voice_configs import *  
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -106,15 +106,15 @@ def record_audio():
         wf.writeframes(b''.join(frames))
 
 def main(args):
-    prompt_path = "prompts/wpq_template.txt"
+    prompt_path = f"prompts/{args.config}_template.txt"
     with open(prompt_path, 'r', encoding='utf-8') as file:
         template = file.read().strip()  # {dialogue}
     prompt_template = PromptTemplate(template=template, input_variables=["dialogue"])
-    voice_configs = eval(args.config + "_configs")
-    sovits_path = voice_configs.SOVITS_PATH
-    gpt_path = voice_configs.GPT_PATH
-    ref_wav_path = voice_configs.REF_WAVE_PATH
-    with open(voice_configs.REF_TEXT_PATH, "r", encoding='utf-8') as f:
+    vcs = eval(args.config + "_configs")
+    sovits_path = vcs.SOVITS_PATH
+    gpt_path = vcs.GPT_PATH
+    ref_wav_path = vcs.REF_WAVE_PATH
+    with open(vcs.REF_TEXT_PATH, "r", encoding='utf-8') as f:
         ref_text = f.read()
 
     # Create an instance of the VoiceOutputCallbackHandler
@@ -145,13 +145,13 @@ def main(args):
             #     continue  # Skip to the next iteration if TTS is busy
             try:
                 print("按下空格开始说话")
-                user_input = input()
-                # record_audio()
-                # print("Transcribing...")
-                # time_ckpt = time.time()
-                # user_input = whisper_model.transcribe("recordings/output.wav", language="zh")["text"]
-                #
-                # print("%s: %s (Time %d ms)" % ("Guest", user_input, (time.time() - time_ckpt) * 1000))
+                # user_input = input()
+                record_audio()
+                print("Transcribing...")
+                time_ckpt = time.time()
+                user_input = whisper_model.transcribe("recordings/output.wav", language="zh")["text"]
+                
+                print("%s: %s (Time %d ms)" % ("Guest", user_input, (time.time() - time_ckpt) * 1000))
 
             except subprocess.CalledProcessError:
                 print("voice recognition failed, please try again")
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     #     template = file.read().strip()  # {dialogue}
     # prompt_template = PromptTemplate(template=template, input_variables=["dialogue"])
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default=r"wpq")
+    parser.add_argument("--config", type=str, default=r"cfg0")
     args = parser.parse_args()
     main(args)
 
