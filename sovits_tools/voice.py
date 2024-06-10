@@ -2,7 +2,7 @@ import os, re
 import LangSegment
 from tqdm import tqdm
 
-import voice_configs.wpq_configs as configs
+import base_configs
 import torch
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 import numpy as np
@@ -18,11 +18,11 @@ from sovits_tools.text.cleaner import clean_text
 from sovits_tools.module.mel_processing import spectrogram_torch
 from sovits_tools.my_utils import load_audio
 
-gpt_path = configs.GPT_PATH
-sovits_path = configs.SOVITS_PATH
-cnhubert.cnhubert_base_path = configs.CUHUBERT_PATH
+gpt_path = base_configs.GPT_PATH
+sovits_path = base_configs.SOVITS_PATH
+cnhubert.cnhubert_base_path = base_configs.CUHUBERT_PATH
 # cnhubert_base_path = configs.CUHUBERT_PATH
-bert_path = configs.BERT_PATH
+bert_path = base_configs.BERT_PATH
 
 if "_CUDA_VISIBLE_DEVICES" in os.environ:
     os.environ["CUDA_VISIBLE_DEVICES"] = os.environ["_CUDA_VISIBLE_DEVICES"]
@@ -38,7 +38,21 @@ bert_model = AutoModelForMaskedLM.from_pretrained(bert_path)
 bert_model = bert_model.half().to(device)
 ssl_model = cnhubert.get_model().half().to(device)
 
-splits = {"，", "。", "？", "！", ",", ".", "?", "!", "~", ":", "：", "—", "…", }
+splits = {
+    "，",
+    "。",
+    "？",
+    "！",
+    ",",
+    ".",
+    "?",
+    "!",
+    "~",
+    ":",
+    "：",
+    "—",
+    "…",
+}
 
 
 def get_bert_feature(text, word2ph):
@@ -94,7 +108,7 @@ def load_sovits_weights(sovits_path):
         hps.data.filter_length // 2 + 1,
         hps.train.segment_size // hps.data.hop_length,
         n_speakers=hps.data.n_speakers,
-        **hps.model
+        **hps.model,
     )
     # if ("pretrained" not in sovits_path):
     #     del vq_model.enc_q
@@ -102,9 +116,6 @@ def load_sovits_weights(sovits_path):
 
     vq_model.load_state_dict(dict_s2["weight"], strict=False)
     return vq_model, hps
-
-
-
 
 
 def load_gpt_weights(gpt_path):
@@ -125,9 +136,6 @@ def load_gpt_weights(gpt_path):
     return t2s_model
 
 
-
-
-
 def get_spepc(hps, filename):
     audio = load_audio(filename, int(hps.data.sampling_rate))
     audio = torch.FloatTensor(audio)
@@ -145,7 +153,7 @@ def get_spepc(hps, filename):
 
 
 def splite_en_inf(sentence, language):
-    pattern = re.compile(r'[a-zA-Z ]+')
+    pattern = re.compile(r"[a-zA-Z ]+")
     textlist = []
     langlist = []
     pos = 0
@@ -162,7 +170,7 @@ def splite_en_inf(sentence, language):
         langlist.append(language)
     # Merge punctuation into previous word
     for i in range(len(textlist) - 1, 0, -1):
-        if re.match(r'^[\W_]+$', textlist[i]):
+        if re.match(r"^[\W_]+$", textlist[i]):
             textlist[i - 1] += textlist[i]
             del textlist[i]
             del langlist[i]
@@ -201,16 +209,13 @@ def get_bert_inf(phones, word2ph, norm_text, language):
     if language == "zh":
         bert = get_bert_feature(norm_text, word2ph).to(device)  # .to(dtype)
     else:
-        bert = torch.zeros(
-            (1024, len(phones)),
-            dtype=torch.float16
-        ).to(device)
+        bert = torch.zeros((1024, len(phones)), dtype=torch.float16).to(device)
 
     return bert
 
 
 def nonen_clean_text_inf(text, language):
-    if (language != "auto"):
+    if language != "auto":
         textlist, langlist = splite_en_inf(text, language)
     else:
         textlist = []
@@ -231,13 +236,13 @@ def nonen_clean_text_inf(text, language):
     # print(word2ph_list)
     phones = sum(phones_list, [])
     word2ph = sum(word2ph_list, [])
-    norm_text = ' '.join(norm_text_list)
+    norm_text = " ".join(norm_text_list)
 
     return phones, word2ph, norm_text
 
 
 def nonen_get_bert_inf(text, language):
-    if (language != "auto"):
+    if language != "auto":
         textlist, langlist = splite_en_inf(text, language)
     else:
         textlist = []
@@ -256,9 +261,6 @@ def nonen_get_bert_inf(text, language):
     bert = torch.cat(bert_list, dim=1)
 
     return bert
-
-
-
 
 
 def get_first(text):
@@ -307,8 +309,19 @@ def merge_short_text_in_array(texts, threshold):
     return result
 
 
-def get_tts_wav(vq_model, t2s_model, hps, ref_wav_path, prompt_text, text, top_k=20,
-                top_p=0.6, temperature=0.6, hz=50, text_language="all_zh"):
+def get_tts_wav(
+    vq_model,
+    t2s_model,
+    hps,
+    ref_wav_path,
+    prompt_text,
+    text,
+    top_k=20,
+    top_p=0.6,
+    temperature=0.6,
+    hz=50,
+    text_language="all_zh",
+):
 
     t0 = ttime()
     prompt_language = "all_zh"
@@ -325,10 +338,7 @@ def get_tts_wav(vq_model, t2s_model, hps, ref_wav_path, prompt_text, text, top_k
         # 转换为目标文本
         text = "。" + text if text_language != "en" else "." + text
 
-    zero_wav = np.zeros(
-        int(hps.data.sampling_rate * 0.3),
-        dtype=np.float16
-    )
+    zero_wav = np.zeros(int(hps.data.sampling_rate * 0.3), dtype=np.float16)
     with torch.no_grad():
         # 载入目标文本
         wav16k, sr = librosa.load(ref_wav_path, sr=16000)
@@ -361,7 +371,9 @@ def get_tts_wav(vq_model, t2s_model, hps, ref_wav_path, prompt_text, text, top_k
     # 参考文本
     phones1, word2ph1, norm_text1 = get_cleaned_text_final(prompt_text, prompt_language)
 
-    bert1 = get_bert_final(phones1, word2ph1, norm_text1, prompt_language, device).to(torch.float16)
+    bert1 = get_bert_final(phones1, word2ph1, norm_text1, prompt_language, device).to(
+        torch.float16
+    )
 
     for text in tqdm(texts):
         # 解决输入目标文本的空行导致报错的问题
@@ -372,11 +384,12 @@ def get_tts_wav(vq_model, t2s_model, hps, ref_wav_path, prompt_text, text, top_k
         # print(i18n("实际输入的目标文本(每句):"), text)
         phones2, word2ph2, norm_text2 = get_cleaned_text_final(text, text_language)
         # print(i18n("前端处理后的文本(每句):"), norm_text2)
-        bert2 = get_bert_final(phones2, word2ph2, norm_text2, text_language, device).to(torch.float16)
+        bert2 = get_bert_final(phones2, word2ph2, norm_text2, text_language, device).to(
+            torch.float16
+        )
 
         bert = torch.cat([bert1, bert2], 1)
         all_phoneme_ids = torch.LongTensor(phones1 + phones2).to(device).unsqueeze(0)
-
 
         bert = bert.to(device).unsqueeze(0)
         all_phoneme_len = torch.tensor([all_phoneme_ids.shape[-1]]).to(device)
@@ -447,12 +460,13 @@ def cut_by_punctuation(inp):
     # if not re.search(r'[^\w\s]', inp[-1]):
     # inp += '。'
     inp = inp.strip("\n")
-    punds = r'[,.;?!、，。？！;：]'
+    punds = r"[,.;?!、，。？！;：]"
     # punds = r'[.;?!。？！;]'
-    items = re.split(f'({punds})', inp)
+    items = re.split(f"({punds})", inp)
     items = ["".join(group) for group in zip(items[::2], items[1::2])]
     opt = "\n".join(items)
     return opt
+
 
 def cut_4_sentences(inp):
     inp = inp.strip("\n")
@@ -462,17 +476,19 @@ def cut_4_sentences(inp):
     if len(split_idx) > 1:
         opts = []
         for idx in range(len(split_idx) - 1):
-            opts.append("".join(inps[split_idx[idx]: split_idx[idx + 1]]))
+            opts.append("".join(inps[split_idx[idx] : split_idx[idx + 1]]))
     else:
         opts = [inp]
     return "\n".join(opts)
 
+
 def custom_sort_key(s):
     # 使用正则表达式提取字符串中的数字部分和非数字部分
-    parts = re.split('(\d+)', s)
+    parts = re.split("(\d+)", s)
     # 将数字部分转换为整数，非数字部分保持不变
     parts = [int(part) if part.isdigit() else part for part in parts]
     return parts
+
 
 if __name__ == "__main__":
     MODEL_ROOT = r"D:\Projects\voice-assistant\models"
@@ -487,8 +503,10 @@ if __name__ == "__main__":
     vq_model, hps = load_sovits_weights(sovits_path)
     tts_model = load_gpt_weights(gpt_path)
 
-    sampling_rate, output_wave = get_tts_wav(vq_model, tts_model, hps, REF_WAVE_PATH, REF_TEXT, input_text)
-    audio_obj = sa.WaveObject(output_wave, sample_rate=sampling_rate//2)
+    sampling_rate, output_wave = get_tts_wav(
+        vq_model, tts_model, hps, REF_WAVE_PATH, REF_TEXT, input_text
+    )
+    audio_obj = sa.WaveObject(output_wave, sample_rate=sampling_rate // 2)
     play_obj = audio_obj.play()
     play_obj.wait_done()
     print("done")

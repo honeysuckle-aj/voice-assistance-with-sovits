@@ -10,6 +10,7 @@ def load_audio(file, sr):
         file = (
             file.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
         )  # 防止小白拷路径头尾带了空格和"和回车
+        # print(file)
         out, _ = (
             ffmpeg.input(file, threads=0)
             .output("-", format="f32le", acodec="pcm_f32le", ac=1, ar=sr)
