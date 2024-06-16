@@ -1,27 +1,3 @@
 # torch
 # torchvision
 # torchaudio
-langchain
-langchain-community
-numba
-numpy
-tqdm
-more-itertools
-tiktoken
-pyaudio
-openai-whisper
-requests
-simpleaudio
-torch
-transformers
-pyyaml
-regex
-einops
-scipy
-librosa
-langsegment
-cn2an
-pypinyin
-jieba_fast
-ffmpeg-python
-ollama

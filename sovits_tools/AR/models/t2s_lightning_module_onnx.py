@@ -2,15 +2,15 @@
 # reference: https://github.com/lifeiteng/vall-e
 import os, sys
 
-now_dir = os.getcwd()
-sys.path.append(now_dir)
+# now_dir = os.getcwd()
+# sys.path.append(now_dir)
+import torch
 from typing import Dict
 
-import torch
 from pytorch_lightning import LightningModule
-from AR.models.t2s_model_onnx import Text2SemanticDecoder
-from AR.modules.lr_schedulers import WarmupCosineLRSchedule
-from AR.modules.optim import ScaledAdam
+from sovits_tools.AR.models.t2s_model_onnx import Text2SemanticDecoder
+from sovits_tools.AR.modules.lr_schedulers import WarmupCosineLRSchedule
+from sovits_tools.AR.modules.optim import ScaledAdam
 
 
 class Text2SemanticLightningModule(LightningModule):

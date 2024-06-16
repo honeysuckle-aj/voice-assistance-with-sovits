@@ -1,22 +1,23 @@
-import os, re
-import LangSegment
-from tqdm import tqdm
-
-import base_configs
-import torch
-from transformers import AutoModelForMaskedLM, AutoTokenizer
-import numpy as np
-import librosa
-import simpleaudio as sa
+import os
+import re
 from time import time as ttime
 
-from sovits_tools.feature_extractor import cnhubert
-from sovits_tools.module.models import SynthesizerTrn
+import LangSegment
+import librosa
+import numpy as np
+import simpleaudio as sa
+import torch
+from tqdm import tqdm
+from transformers import AutoModelForMaskedLM, AutoTokenizer
+
+import base_configs
 from sovits_tools.AR.models.t2s_lightning_module import Text2SemanticLightningModule
+from sovits_tools.feature_extractor import cnhubert
+from sovits_tools.module.mel_processing import spectrogram_torch
+from sovits_tools.module.models import SynthesizerTrn
+from sovits_tools.my_utils import load_audio
 from sovits_tools.text import cleaned_text_to_sequence
 from sovits_tools.text.cleaner import clean_text
-from sovits_tools.module.mel_processing import spectrogram_torch
-from sovits_tools.my_utils import load_audio
 
 gpt_path = base_configs.GPT_PATH
 sovits_path = base_configs.SOVITS_PATH
